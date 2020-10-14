@@ -1,45 +1,8 @@
 import express from "express";
 import fs from "fs";
+import DbContext from "./data/database";
+import statuses from "statuses";
 
-
-
-const isUser = (e: any): e is User => {
-    return typeof e.UserID === "string" &&
-        typeof e.FirstName === "string" &&
-        typeof e.LastName === "string" &&
-        typeof e.EmailAddress === "string" &&
-        typeof e.Password === "string";
-}
-
-// we have sqlite at home
-const readUsers = (): User[] => {
-    try {
-        const res = JSON.parse(fs.readFileSync("users.json").toString());
-        if (!Array.isArray(res))
-            return [];
-
-        for (const val of res)
-            if (!isUser(val))
-                return [];
-
-        return res;
-    }
-    catch (e) {
-        return [];
-    }
-}
-
-const writeUsers = (u: User[]) => {
-    fs.writeFileSync("users.json", JSON.stringify(u));
-}
-
-const error = (msg: string) => {
-    return {"status": "error", "reason": msg};
-}
-
-const ok = (msg?: string) => {
-    return {"status": "ok", "message": msg};
-}
 
 const s = (s: any): string => {
     if (typeof s === "string" && s.trim()) {
@@ -47,6 +10,8 @@ const s = (s: any): string => {
     }
     return "";
 }
+
+const db = new DbContext("database.db");
 
 const app = express();
 
@@ -61,7 +26,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/Users", (req, res) => {
-    res.json(readUsers());
+    res.json(db.users());
 });
 
 app.post("/User", (req, res) => {

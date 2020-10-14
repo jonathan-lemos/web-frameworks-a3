@@ -1,5 +1,5 @@
 import sqlite, { Database } from "better-sqlite3";
-import User, { DbUser, dbUserToUser } from "./user";
+import User, { AddUser, DbUser, dbUserToUser } from "./user";
 import jwt from "jsonwebtoken";
 import Post, { dbPostToPost, postToDbPost } from "./post";
 import argon2 from "argon2";
@@ -49,11 +49,12 @@ export default class DbContext {
         );
 
         CREATE TABLE IF NOT EXISTS Comments (
-            commentId INT PRIMARY KEY AUTOINCREMENT,
+            commentId INT NOT NULL,
             userId VARCHAR(255) FOREIGN KEY REFERENCES Users(userId) NOT NULL ON DELETE CASCADE,
             postId INT FOREIGN KEY REFERENCES Posts(postId) NOT NULL ON DELETE CASCADE,
             comment TEXT NOT NULL,
-            commentDate INTEGER NOT NULL
+            commentDate INTEGER NOT NULL,
+            PRIMARY KEY (commentId, userId)
         );
 
         CREATE TABLE IF NOT EXISTS PostCategories (
@@ -78,14 +79,17 @@ export default class DbContext {
         return x.length > 0 ? x[0] : null;
     }
 
-    public addUser(u: DbUser): boolean {
+    public async addUser(u: AddUser): Promise<boolean> {
+        const hash = await argon2.hash(u.password);
+        const dbu: DbUser = {...u, passwordHash: hash};
+
         const res = this.db.prepare("INSERT INTO Users VALUES(@userId, @firstName, @lastName, @emailAddress, @password)")
-            .run(u);
+            .run(dbu);
 
         return res.changes > 0;
     }
 
-    public updateUser(u: Partial<User & { password: string }> & { userId: string }): boolean {
+    public async updateUser(u: Partial<AddUser> & { userId: string }): Promise<boolean> {
         const id = u.userId;
 
         if (this.user(id) == null) {
@@ -105,20 +109,24 @@ export default class DbContext {
         }
 
         if (typeof u.password === "string") {
-            const hash = argon2.hash(u.password);
+            const hash = await argon2.hash(u.password);
             this.db.prepare("UPDATE Users SET passwordHash = ? WHERE userId = ?").run(hash, id);
         }
 
         return true;
     }
 
-    public deleteUser(userId: number): boolean {
+    public deleteUser(userId: string): boolean {
         const res = this.db.prepare("DELETE FROM Users WHERE userId = ?").run(userId);
 
         return res.changes > 0;
     }
 
-    public authenticateUser(id: string, password: string): string | null {
+    public userPosts(userId: string): Post[] {
+        return this.db.prepare("SELECT * FROM Posts WHERE userId = ?").all(userId).map(dbPostToPost);
+    }
+
+    public async authenticateUser(id: string, password: string): Promise<string | null> {
         const res = this.db.prepare("SELECT * FROM Users WHERE userId = ?")
             .all(id, password);
 
@@ -269,9 +277,15 @@ export default class DbContext {
     }
 
     public addComment(c: Comment): boolean {
-        const dc = commentToDbComment(c);
+        const comments = this.db.prepare("SELECT * FROM Comments WHERE userId = ? ORDER BY commentId DESC").all(c.userId);
+        let id = 1;
+        if (comments.length > 0) {
+            id = comments[0].commentId + 1;
+        }
 
-        const res = this.db.prepare("INSERT INTO Comments VALUES (@userId, @postId, @comment, @commentDate)").run(dc);
+        const dc = {...commentToDbComment(c), commentId: id};
+
+        const res = this.db.prepare("INSERT INTO Comments VALUES (@commentId, @userId, @postId, @comment, @commentDate)").run(dc);
         return res.changes > 0;
     }
 
