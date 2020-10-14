@@ -1,0 +1,31 @@
+{
+  "name": "a2",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc page/script.ts --sourceMap --target es2019 && tsc src/main.ts --esModuleInterop --sourceMap",
+    "start": "node src/main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jonathan-lemos/web-frameworks-a2.git"
+  },
+  "author": "Jonathan Lemos",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jonathan-lemos/web-frameworks-a2/issues"
+  },
+  "homepage": "https://github.com/jonathan-lemos/web-frameworks-a2#readme",
+  "dependencies": {
+    "@types/better-sqlite3": "^5.4.0",
+    "@types/express": "^4.17.8",
+    "@types/jsonwebtoken": "^8.5.0",
+    "argon2": "^0.27.0",
+    "better-sqlite3": "^7.1.1",
+    "express": "^4.17.1",
+    "jsonwebtoken": "^8.5.1",
+    "typescript": "^4.0.3"
+  }
+}

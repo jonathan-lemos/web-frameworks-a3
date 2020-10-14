@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <link href="style.css" rel="stylesheet">
+
+    <title>Users</title>
+
+    <script src="script.js" defer></script>
+</head>
+
+<body class="fluid col p-s my-m w-100">
+    <div class="fluid col w-80">
+        <h1 class="p-m">Users</h1>
+        <table id="users" class="zebra w-100">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Email</th>
+                    <th>Password</th>
+                    <th></th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="new-user">
+                    <td><input type="text" name="UserID" placeholder="New UserID"></td>
+                    <td><input type="text" name="FirstName" placeholder="New First Name"></td>
+                    <td><input type="text" name="LastName" placeholder="New Last Name"></td>
+                    <td><input type="text" name="EmailAddress" placeholder="New Email"></td>
+                    <td><input type="text" name="Password" placeholder="New Password"></td>
+                    <td></td>
+                    <td><button class="green">Add user</button></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h1 class="p-m">API Documentation</h2>
+        <table class="zebra w-100">
+            <thead>
+                <tr>
+                    <td>Endpoint</td>
+                    <td>Method</td>
+                    <td>Description</td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>/</code></td>
+                    <td>GET</td>
+                    <td>Returns this page.</td>
+                </tr>
+                <tr>
+                    <td><code>/Users</code></td>
+                    <td>GET</td>
+                    <td>Returns a JSON array of users in the database (which is really just a JSON file).</td>
+                </tr>
+                <tr>
+                    <td><code>/User</code></td>
+                    <td>POST</td>
+                    <td>Creates a user. The <code>Content-Type</code> must be <code>application/json</code> or <code>application/x-www-form-urlencoded</code>
+                        and the body object must have keys
+                        <code>UserID</code>, <code>FirstName</code>, <code>LastName</code>, <code>EmailAddress</code>, and <code>Password</code>.
+                        You cannot create a user with a <code>UserID</code> that already exists. The API will return a JSON response indicating success or failure.
+                    </td>
+                </tr>
+                <tr>
+                    <td><code>/User/{id}</code></td>
+                    <td>GET</td>
+                    <td>Gets the user with the given <code>id</code> (case sensitive), or returns 404 if the user doesn't exist. An appropriate JSON response is returned for either case.
+                    </td>
+                </tr>
+                <tr>
+                    <td><code>/User/{id}</code></td>
+                    <td>PATCH</td>
+                    <td>Updates a user's info. The <code>Content-Type</code> must be <code>application/json</code> or <code>application/x-www-form-urlencoded</code>
+                        and the body can have keys
+                        <code>FirstName</code>, <code>LastName</code>, <code>EmailAddress</code>, and/or <code>Password</code>.
+                        You must update a user with a <code>UserID</code> that already exists. The API will return a JSON response indicating success or failure.
+                    </td>
+                </tr>
+                <tr>
+                    <td><code>/User/{id}</code></td>
+                    <td>DELETE</td>
+                    <td>Deletes the user with the given <code>id</code> (case sensitive), or returns 404 if the user doesn't exist. An appropriate JSON response is returned for either case.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+    </div>
+</body>
+
+</html>

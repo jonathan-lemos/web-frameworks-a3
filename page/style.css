@@ -1,0 +1,359 @@
+html {
+    scroll-behavior: smooth;
+}
+
+html, body {
+    height: 100%;
+    width: 100%;
+    background-color: #EEEEEE;
+}
+
+* {
+    box-sizing: border-box;
+    color: #383838;
+    font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+    margin: 0;
+    padding: 0;
+    transition: 0.3s;
+    outline: none;
+    border: none;
+}
+
+.grow {
+    flex-grow: 1;
+}
+
+.fluid {
+    height: 100%;
+    width: 100%;
+}
+
+.w-100 {
+    width: 100%;
+}
+
+.w-80 {
+    width: 80%;
+}
+
+.h-100 {
+    height: 100%;
+}
+
+.h-10-em {
+    height: 10em;
+}
+
+.m-s {
+    margin: 0.5em;
+}
+
+.p-s {
+    padding: 0.5em;
+}
+
+.m-m {
+    margin: 1em;
+}
+
+.my-m {
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
+
+.p-m {
+    padding: 1em;
+}
+
+.row {
+    display: flex;
+    justify-items: center;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.justify-center {
+    justify-content: center;
+}
+
+button {
+    border: none;
+    text-align: center;
+    font-weight: bold;
+    padding: 1em;
+    white-space: nowrap;
+}
+
+button:focus {
+    outline: none;
+}
+
+button:hover {
+  /* box-shadow: 0 0.25em 0.5em black */
+  cursor: pointer;
+}
+
+button.green {
+    background-color: #33EE99;
+}
+
+button.green:hover {
+    background-color: #22DD88;
+}
+
+button.red {
+    background-color: #EE6699;
+}
+
+button.red:hover {
+    background-color: #DD4477;
+}
+
+textarea {
+    resize: none;
+}
+
+.size-150 {
+    font-size: 150%;
+}
+
+.size-200 {
+    font-size: 200%;
+}
+
+.clickable:hover {
+    cursor: pointer;
+}
+
+.far, .fas {
+    font-family: "FontAwesome";
+}
+
+.review-star {
+    color: goldenrod;
+}
+
+input[type=text], textarea {
+    background-color: #FFFFFF80
+}
+
+input[type=text]:hover, textarea:hover {
+    background-color: #FFFFFF
+}
+
+.flashing {
+    /* outline: red solid 0.1em; */
+    background-color: #CC444444 !important;
+}
+
+@keyframes scale-y-in {
+    from {
+        transform: scaleY(0);
+    }
+
+    to {
+        transform: scaleY(1);
+    }
+}
+
+table {
+    border-collapse: collapse;
+}
+
+table tr {
+    padding: 0.5em;
+    margin: 0;
+}
+
+table tr * {
+    padding: 0.5em;
+    margin: 0;
+}
+
+table.zebra > thead > tr {
+    transform-origin: top center;
+}
+
+table.zebra > thead > tr {
+    background-color: #D0D0D080;
+}
+
+table.zebra > thead > tr:hover {
+    background-color: #D0D0D0;
+}
+
+table.zebra > tbody > tr {
+    transform-origin: top center;
+    animation: scale-y-in 0.7s ease forwards;
+}
+
+table.zebra > tbody > tr:nth-child(2n) {
+    background-color: #E0E0E080;
+}
+
+table.zebra > tbody > tr:nth-child(2n):hover {
+    background-color: #E0E0E0;
+}
+
+table.zebra > tbody > tr:nth-child(2n + 1) {
+    background-color: #F0F0F080;
+}
+
+table.zebra > tbody > tr:nth-child(2n + 1):hover {
+    background-color: #F0F0F0;
+}
+
+code {
+    font-family: monospace;
+}
+
+/*
+
+@keyframes glitch-img {
+    0% { 
+        transform: translateX(0) skewX(0);
+    }
+
+    35% { 
+        transform: translateX(0) skewX(0);
+    }
+
+    38% { 
+        transform: translateX(-0.2em) skewX(0);
+    }
+
+    41% { 
+        transform: translateX(0) skewX(0);
+    }
+
+    52% { 
+        transform: translateX(-0.2em) skewX(0.5deg);
+    }
+
+    55% { 
+        transform: translateX(0.2em) skewX(-0.5deg);
+    }
+
+    62% { 
+        transform: translateX(0) skewX(0);
+    }
+
+    65% { 
+        transform: translateX(0.2em) skewX(-0.5deg);
+    }
+
+    68% { 
+        transform: translateX(0) skewX(0);
+    }
+
+    71% { 
+        transform: translateX(0.2em) skewX(-0.5deg);
+    }
+
+    74% { 
+        transform: translateX(0) skewX(0);
+    }
+
+    100% { 
+        transform: translateX(0) skewX(0);
+    }
+}
+
+@keyframes glitch-mask {
+    0% { 
+        transform: translateX(0) skewX(0);
+        background-color: #00000000;
+        filter: blur(0);
+    }
+
+    35% { 
+        transform: translateX(0) skewX(0);
+        background-color: #00000000;
+        filter: blur(0);
+    }
+
+    38% { 
+        transform: translateX(-0.2em) skewX(0);
+        background-color: red;
+        filter: blur(0.05em);
+    }
+
+    41% { 
+        transform: translateX(0) skewX(0);
+        background-color: #00000000;
+        filter: blur(0);
+    }
+
+    52% { 
+        transform: translateX(-0.2em) skewX(0.5deg);
+        background-color: red;
+        filter: blur(0.05em);
+    }
+
+    55% { 
+        transform: translateX(0.2em) skewX(-0.5deg);
+        background-color: deepskyblue;
+        filter: blur(0.05em);
+    }
+
+    62% { 
+        transform: translateX(0) skewX(0);
+        background-color: #00000000;
+        filter: blur(0);
+    }
+
+    65% { 
+        transform: translateX(0.2em) skewX(-0.5deg);
+        background-color: deepskyblue;
+        filter: blur(0.05em);
+    }
+
+    68% { 
+        transform: translateX(0) skewX(0);
+    }
+
+    71% { 
+        transform: translateX(0.2em) skewX(-0.5deg);
+        background-color: red;
+        filter: blur(0.05em);
+    }
+
+    74% { 
+        transform: translateX(0) skewX(0);
+    }
+
+    100% { 
+        transform: translateX(0) skewX(0);
+    }
+}
+
+*/
+
+#arch {
+    position: relative;
+}
+
+#arch > img {
+    width: 20vw;
+    height: 20vw;
+    animation: glitch-img 1s linear infinite
+}
+
+#arch > div {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 5%;
+    background: black;
+    z-index: 1;
+    animation: glitch-mask 1s linear infinite;
+}
