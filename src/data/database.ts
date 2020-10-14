@@ -5,6 +5,7 @@ import Post, { dbPostToPost, postToDbPost } from "./post";
 import argon2 from "argon2";
 import Category from "./category";
 import PostCategory from "./post-category";
+import Comment, { commentToDbComment, dbCommentToComment } from "./comment";
 
 const SUPER_SECRET_STRING = "hunter2";
 
@@ -259,6 +260,30 @@ export default class DbContext {
     }
 
     public comments(postId: number): Comment[] {
-        return this.db.prepare("SELECT * FROM COMMENTS WHERE postId = ?").all(postId);
+        return this.db.prepare("SELECT * FROM Comments WHERE postId = ?").all(postId).map(dbCommentToComment);
+    }
+
+    public comment(postId: number, commentId: number): Comment | null {
+        const res = this.db.prepare("SELECT * FROM Comments WHERE commentId = ? AND postId = ?").all(commentId, postId);
+        return res.length > 0 ? res[0] : null;
+    }
+
+    public addComment(c: Comment): boolean {
+        const dc = commentToDbComment(c);
+
+        const res = this.db.prepare("INSERT INTO Comments VALUES (@userId, @postId, @comment, @commentDate)").run(dc);
+        return res.changes > 0;
+    }
+
+    public updateComment(postId: number, commentId: number, content: string): boolean {
+        const res = this.db.prepare("UPDATE Comments SET comment = ? WHERE commentId = ? AND postId = ?").run(content, commentId, postId);
+
+        return res.changes > 0;
+    }
+
+    public deleteComment(postId: number, commentId: number): boolean {
+        const res = this.db.prepare("DELETE FROM Comments WHERE commentId = ? AND postId = ?").run(commentId, postId);
+
+        return res.changes > 0;
     }
 }

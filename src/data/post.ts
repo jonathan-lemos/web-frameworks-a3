@@ -10,7 +10,7 @@ export interface BasePost {
 
 export type Post = BasePost & {createdDate: Date, lastUpdated: Date};
 
-export type DbPost = BasePost & {createdDate: Number, lastUpdated: Number};
+export type DbPost = BasePost & {createdDate: number, lastUpdated: number};
 
 export const postToDbPost = (p: Post): DbPost => ({...p, createdDate: dateToNumber(p.createdDate), lastUpdated: dateToNumber(p.lastUpdated)});
 
