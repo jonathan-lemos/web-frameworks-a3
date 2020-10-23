@@ -207,7 +207,7 @@ export default class DbContext {
         return this.db.prepare("SELECT * FROM Categories").all();
     }
 
-    public category(categoryId: number): Post | null {
+    public category(categoryId: number): Category | null {
         const res = this.db.prepare("SELECT * FROM Categories WHERE categoryId = ?").all(categoryId);
         return res.length > 0 ? res[0] : null;
     }

@@ -1,9 +1,9 @@
 import { dateToNumber, numberToDate } from "./date";
 
 export interface BaseComment {
-    commentId: string;
+    commentId: number;
     userId: string;
-    postId: string;
+    postId: number;
     comment: string;
 };
 

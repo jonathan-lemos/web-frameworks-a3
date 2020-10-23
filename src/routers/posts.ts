@@ -1,7 +1,7 @@
 import express from "express";
 import DbContext from "../data/database";
-import respond from "./respond";
-import authorize from "./authorize";
+import respond from "../api/respond";
+import authorize from "../api/authorize";
 import Post from "../data/post";
 
 export const PostsRouter = (db: DbContext) => {
@@ -43,37 +43,30 @@ export const PostsRouter = (db: DbContext) => {
         }
 
         const r = db.addPost(b);
-        respond(res, 201, `Post '${b.userId}' created.`);
+        respond(res, 201, `Post created.`);
     });
 
-    users.get("/:id/:password", async (req, res) => {
-        const t = await db.authenticateUser(req.params.id, req.params.password);
-        if (t === null) {
-            respond(res, 401);
+    posts.use(authorize(db));
+
+    posts.patch("/:postId", (req: PostAssignableRequest, res) => {
+        const r = db.updatePost({...req.body, postId: req.post!.postId});
+        if (!r) {
+            respond(res, 404, `Post '${req.post!.postId}' does not exist.`);
             return;
         }
-
-        res.cookie("X-Auth-Token", t);
-        respond(res, 200, "Successfully authenticated");
+        respond(res, 200, `Post '${req.post!.postId}' updated`);
     });
 
-    users.use(authorize(db));
-
-    users.patch("/:userId", async (req: UserRequest, res) => {
-        const r = await db.updateUser({...req.body, userId: req.user!.userId});
+    posts.delete("/:postId", (req: PostAssignableRequest, res) => {
+        const r = db.deletePost(req.post!.postId);
         if (!r) {
-            respond(res, 404, `User '${req.body}`)
+            respond(res, 404, `Post '${req.post!.postId}' does not exist.`);
+            return;
         }
-        respond(res, 201, `User '${req.body}' updated}`);
+        respond(res, 204, `Post '${req.post!.postId}' deleted`);
     });
 
-    users.delete("/:userId", async (req: UserRequest, res) => {
-        const r = await db.deleteUser(req.user!.userId);
-        if (!r) {
-            respond(res, 404, `User '${req.body}`)
-        }
-        respond(res, 201, `User '${req.body}' updated}`);
-    });
+    return posts;
 }
 
 export default PostsRouter;

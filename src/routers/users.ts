@@ -1,8 +1,8 @@
 import express from "express";
 import DbContext from "../data/database";
-import respond from "./respond";
+import respond from "../api/respond";
 import User from "../data/user";
-import authorize from "./authorize";
+import authorize from "../api/authorize";
 
 export const UsersRouter = (db: DbContext) => {
     const users = express.Router();
@@ -61,7 +61,7 @@ export const UsersRouter = (db: DbContext) => {
         }
 
         res.cookie("X-Auth-Token", t);
-        respond(res, 200, "Successfully authenticated");
+        respond(res, 200, t);
     });
 
     users.use(authorize(db));
@@ -69,17 +69,19 @@ export const UsersRouter = (db: DbContext) => {
     users.patch("/:userId", async (req: UserRequest, res) => {
         const r = await db.updateUser({...req.body, userId: req.user!.userId});
         if (!r) {
-            respond(res, 404, `User '${req.body}`)
+            respond(res, 404, `User '${req.user!.userId}' does not exist.`);
+            return;
         }
-        respond(res, 201, `User '${req.body}' updated}`);
+        respond(res, 200, `User '${req.user!.userId}' updated`);
     });
 
     users.delete("/:userId", async (req: UserRequest, res) => {
         const r = await db.deleteUser(req.user!.userId);
         if (!r) {
-            respond(res, 404, `User '${req.body}`)
+            respond(res, 404, `User '${req.user!.userId}`);
+            return;
         }
-        respond(res, 201, `User '${req.body}' updated}`);
+        respond(res, 204, `User '${req.user!.userId}' deleted`);
     });
 
     return users;
