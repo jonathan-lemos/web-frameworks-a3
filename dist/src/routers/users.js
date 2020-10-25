@@ -41,14 +41,19 @@ exports.UsersRouter = (db) => {
         }
         respond_1.default(res, 201, `User '${b.userId}' created.`);
     });
+    users.get("/Posts/:userId", async (req, res) => {
+        res.json(db.userPosts(req.user.userId));
+    });
     users.get("/:id/:password", async (req, res) => {
         const t = await db.authenticateUser(req.params.id, req.params.password);
         if (t === null) {
-            respond_1.default(res, 401);
+            respond_1.default(res, 401, "Invalid credentials");
             return;
         }
         res.cookie("X-Auth-Token", t);
-        respond_1.default(res, 200, t);
+        res.setHeader("Authorization", `Bearer ${t}`);
+        res.status(200);
+        res.json({ "status": 200, "access_token": t });
     });
     users.use(authorize_1.default(db));
     users.patch("/:userId", async (req, res) => {
@@ -70,3 +75,4 @@ exports.UsersRouter = (db) => {
     return users;
 };
 exports.default = exports.UsersRouter;
+//# sourceMappingURL=users.js.map

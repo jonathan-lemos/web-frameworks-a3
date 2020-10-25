@@ -82,3 +82,4 @@ exports.CommentsRouter = (db) => {
     return comments;
 };
 exports.default = exports.CommentsRouter;
+//# sourceMappingURL=comments.js.map

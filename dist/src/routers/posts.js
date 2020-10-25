@@ -24,19 +24,23 @@ exports.PostsRouter = (db) => {
     posts.get("/:postId", (req, res) => {
         res.json(req.post);
     });
+    posts.use(authorize_1.default(db));
     posts.post("/", (req, res) => {
         const b = req.body;
-        if (typeof b.userId !== "string" ||
-            typeof b.title !== "string" ||
+        if (typeof b.title !== "string" ||
             typeof b.content !== "string" ||
             typeof b.headerImage !== "string") {
-            respond_1.default(res, 400, "The request body needs 'postId', 'userId', 'title', 'content', and 'headerImage' keys.");
+            respond_1.default(res, 400, "The request body needs 'postId', 'title', 'content', and 'headerImage' keys.");
             return;
         }
-        const r = db.addPost(b);
-        respond_1.default(res, 201, `Post created.`);
+        const d = new Date();
+        if (db.addPost({ ...b, userId: req.auth.id, lastUpdated: d, createdDate: d })) {
+            respond_1.default(res, 201, `Post created.`);
+        }
+        else {
+            respond_1.default(res, 400, "Failed to add the post.");
+        }
     });
-    posts.use(authorize_1.default(db));
     posts.patch("/:postId", (req, res) => {
         const r = db.updatePost({ ...req.body, postId: req.post.postId });
         if (!r) {
@@ -56,3 +60,4 @@ exports.PostsRouter = (db) => {
     return posts;
 };
 exports.default = exports.PostsRouter;
+//# sourceMappingURL=posts.js.map

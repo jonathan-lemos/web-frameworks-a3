@@ -65,4 +65,5 @@ exports.PostCategoriesRouter = (db) => {
     });
     return comments;
 };
-exports.default = CommentsRouter;
+exports.default = exports.PostCategoriesRouter;
+//# sourceMappingURL=post-categories.js.map

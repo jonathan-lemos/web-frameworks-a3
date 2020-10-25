@@ -87,4 +87,4 @@ export const PostCategoriesRouter = (db: DbContext) => {
     return comments;
 }
 
-export default CommentsRouter;
+export default PostCategoriesRouter;

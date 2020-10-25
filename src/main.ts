@@ -1,12 +1,11 @@
 import express from "express";
-import fs from "fs";
 import DbContext from "./data/database";
-import statuses from "statuses";
 import cookieParser from "cookie-parser";
 import UsersRouter from "./routers/users";
 import PostsRouter from "./routers/posts";
 import CommentsRouter, { PostCategoriesRouter } from "./routers/post-categories";
 import CategoriesRouter from "./routers/categories";
+import respond from "./api/respond";
 
 const db = new DbContext("database.db");
 const app = express();
@@ -20,6 +19,8 @@ app.use("/Posts", PostsRouter(db));
 app.use("/Comments", CommentsRouter(db));
 app.use("/Categories", CategoriesRouter(db));
 app.use("/PostCategories", PostCategoriesRouter(db));
+
+app.use("*", (req, res) => respond(res, 404, `Invalid URL '${req.url}'`));
 
 console.log("Express listening on port 3000");
 app.listen(3000);

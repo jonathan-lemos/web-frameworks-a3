@@ -1,7 +1,7 @@
 import express from "express";
 import DbContext from "../data/database";
 import respond from "../api/respond";
-import authorize from "../api/authorize";
+import authorize, { AuthAssignableRequest } from "../api/authorize";
 import Post from "../data/post";
 
 export const PostsRouter = (db: DbContext) => {
@@ -30,23 +30,28 @@ export const PostsRouter = (db: DbContext) => {
         res.json(req.post);
     });
 
-    posts.post("/", (req, res) => {
+    posts.use(authorize(db));
+
+    posts.post("/", (req: AuthAssignableRequest, res) => {
         const b = req.body;
 
         if (
-        typeof b.userId !== "string" ||
         typeof b.title !== "string" ||
         typeof b.content !== "string" ||
         typeof b.headerImage !== "string") {
-            respond(res, 400, "The request body needs 'postId', 'userId', 'title', 'content', and 'headerImage' keys.");
+            respond(res, 400, "The request body needs 'postId', 'title', 'content', and 'headerImage' keys.");
             return;
         }
 
-        const r = db.addPost(b);
-        respond(res, 201, `Post created.`);
-    });
+        const d = new Date();
 
-    posts.use(authorize(db));
+        if (db.addPost({...b, userId: req.auth!.id, lastUpdated: d, createdDate: d})) {
+            respond(res, 201, `Post created.`);
+        }
+        else {
+            respond(res, 400, "Failed to add the post.");
+        }
+    });
 
     posts.patch("/:postId", (req: PostAssignableRequest, res) => {
         const r = db.updatePost({...req.body, postId: req.post!.postId});

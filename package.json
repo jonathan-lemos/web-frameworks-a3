@@ -5,8 +5,9 @@
   "main": "src/main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc page/script.ts --sourceMap --target es2019 && tsc src/main.ts --esModuleInterop --sourceMap",
-    "start": "node src/main.js"
+    "build": "tsc",
+    "start": "node dist/src/main.js",
+	"watch": "tsc --watch &; nodemon dist/src/main.js"
   },
   "repository": {
     "type": "git",
@@ -31,5 +32,6 @@
     "jsonwebtoken": "^8.5.1",
     "statuses": "^2.0.0",
     "typescript": "^4.0.3"
-  }
+  },
+  "devDependencies": {}
 }

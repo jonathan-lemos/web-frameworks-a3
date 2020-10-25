@@ -56,3 +56,4 @@ exports.CategoriesRouter = (db) => {
     return categories;
 };
 exports.default = exports.CategoriesRouter;
+//# sourceMappingURL=categories.js.map

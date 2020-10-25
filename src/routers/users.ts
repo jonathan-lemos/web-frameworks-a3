@@ -53,21 +53,27 @@ export const UsersRouter = (db: DbContext) => {
         respond(res, 201, `User '${b.userId}' created.`);
     });
 
+    users.get("/Posts/:userId", async (req: UserRequest, res) => {
+        res.json(db.userPosts(req.user!.userId));
+    });
+
     users.get("/:id/:password", async (req, res) => {
         const t = await db.authenticateUser(req.params.id, req.params.password);
         if (t === null) {
-            respond(res, 401);
+            respond(res, 401, "Invalid credentials");
             return;
         }
 
         res.cookie("X-Auth-Token", t);
-        respond(res, 200, t);
+        res.setHeader("Authorization", `Bearer ${t}`)
+        res.status(200);
+        res.json({"status": 200, "access_token": t});
     });
 
     users.use(authorize(db));
 
     users.patch("/:userId", async (req: UserRequest, res) => {
-        const r = await db.updateUser({...req.body, userId: req.user!.userId});
+        const r = await db.updateUser({ ...req.body, userId: req.user!.userId });
         if (!r) {
             respond(res, 404, `User '${req.user!.userId}' does not exist.`);
             return;
