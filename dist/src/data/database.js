@@ -254,8 +254,8 @@ class DbContext {
         const res = this.db.prepare("INSERT INTO Comments VALUES (@commentId, @userId, @postId, @comment, @commentDate)").run(dc);
         return res.changes > 0;
     }
-    updateComment(postId, commentId, content) {
-        const res = this.db.prepare("UPDATE Comments SET comment = ? WHERE commentId = ? AND postId = ?").run(content, commentId, postId);
+    updateComment(userId, postId, commentId, content) {
+        const res = this.db.prepare("UPDATE Comments SET comment = ? WHERE userId = ? AND commentId = ? AND postId = ?").run(content, userId, commentId, postId);
         return res.changes > 0;
     }
     deleteComment(postId, commentId) {

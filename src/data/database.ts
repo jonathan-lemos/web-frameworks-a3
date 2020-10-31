@@ -319,8 +319,8 @@ export default class DbContext {
         return res.changes > 0;
     }
 
-    public updateComment(postId: number, commentId: number, content: string): boolean {
-        const res = this.db.prepare("UPDATE Comments SET comment = ? WHERE commentId = ? AND postId = ?").run(content, commentId, postId);
+    public updateComment(userId: string, postId: number, commentId: number, content: string): boolean {
+        const res = this.db.prepare("UPDATE Comments SET comment = ? WHERE userId = ? AND commentId = ? AND postId = ?").run(content, userId, commentId, postId);
 
         return res.changes > 0;
     }

@@ -24,19 +24,22 @@ exports.CategoriesRouter = (db) => {
     categories.get("/:categoryId", (req, res) => {
         res.json(req.category);
     });
+    categories.use(authorize_1.default(db));
     categories.post("/", (req, res) => {
         const b = req.body;
-        if (typeof b.userId !== "string" ||
-            typeof b.title !== "string" ||
-            typeof b.content !== "string" ||
-            typeof b.headerImage !== "string") {
-            respond_1.default(res, 400, "The request body needs 'categoryId', 'userId', 'title', 'content', and 'headerImage' keys.");
+        if (typeof b.name !== "string" ||
+            typeof b.description !== "string") {
+            respond_1.default(res, 400, "The request body needs 'name' and 'description' keys.");
             return;
         }
-        const r = db.addCategory(b);
-        respond_1.default(res, 201, `Category created.`);
+        try {
+            const r = db.addCategory(b);
+            respond_1.default(res, 201, `Category created.`);
+        }
+        catch (e) {
+            respond_1.default(res, 409, `A category called ${b.name} already exists.`);
+        }
     });
-    categories.use(authorize_1.default(db));
     categories.patch("/:categoryId", (req, res) => {
         const r = db.updateCategory({ ...req.body, categoryId: req.category.categoryId });
         if (!r) {

@@ -30,26 +30,29 @@ export const CategoriesRouter = (db: DbContext) => {
         res.json(req.category);
     });
 
+    categories.use(authorize(db));
+
     categories.post("/", (req, res) => {
         const b = req.body;
 
         if (
-        typeof b.userId !== "string" ||
-        typeof b.title !== "string" ||
-        typeof b.content !== "string" ||
-        typeof b.headerImage !== "string") {
-            respond(res, 400, "The request body needs 'categoryId', 'userId', 'title', 'content', and 'headerImage' keys.");
+        typeof b.name !== "string" ||
+        typeof b.description !== "string") {
+            respond(res, 400, "The request body needs 'name' and 'description' keys.");
             return;
         }
 
-        const r = db.addCategory(b);
-        respond(res, 201, `Category created.`);
+        try {
+            const r = db.addCategory(b);
+            respond(res, 201, `Category created.`);
+        }
+        catch (e) {
+            respond(res, 409, `A category called ${b.name} already exists.`);
+        }
     });
 
-    categories.use(authorize(db));
-
     categories.patch("/:categoryId", (req: CategoryAssignableRequest, res) => {
-        const r = db.updateCategory({...req.body, categoryId: req.category!.categoryId});
+        const r = db.updateCategory({ ...req.body, categoryId: req.category!.categoryId });
         if (!r) {
             respond(res, 404, `Category '${req.category!.categoryId}' does not exist.`);
             return;

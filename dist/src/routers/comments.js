@@ -34,35 +34,31 @@ exports.CommentsRouter = (db) => {
         next();
     });
     comments.get("/:postId", (req, res) => {
+        console.log("got here");
         res.json(db.comments(req.post.postId));
     });
     comments.get("/:postId/:commentId", (req, res) => {
         res.json(req.comment);
     });
     comments.use(authorize_1.default(db));
-    comments.post("/", (req, res) => {
+    comments.post("/:postId", (req, res) => {
         const b = req.body;
         if (typeof b.userId !== "string" ||
-            typeof b.postId !== "string" ||
             typeof b.comment !== "string") {
             respond_1.default(res, 400, "The request body needs  'userId', 'postId', and 'comment' keys.");
             return;
         }
-        const r = db.addComment(b);
+        const r = db.addComment({ ...b, postId: req.post.postId, commentDate: new Date() });
         respond_1.default(res, 201, `Comment created.`);
     });
     comments.patch("/:postId/:commentId", (req, res) => {
-        if (req.auth.id !== req.user.userId) {
-            respond_1.default(res, 401, `User '${req.auth.id}' does not have permission to modify this post.`);
-            return;
-        }
         if (typeof req.body.content !== "string") {
             respond_1.default(res, 400, `No 'content' given in post body.`);
             return;
         }
-        const r = db.updateComment(req.post.postId, req.comment.commentId, req.body.content);
+        const r = db.updateComment(req.user.userId, req.post.postId, req.comment.commentId, req.body.content);
         if (!r) {
-            respond_1.default(res, 404, `Comment '${req.comment.commentId}' does not exist.`);
+            respond_1.default(res, 404, `Comment '${req.comment.commentId}' not updated.`);
             return;
         }
         respond_1.default(res, 200, `Comment '${req.comment.commentId}' updated`);

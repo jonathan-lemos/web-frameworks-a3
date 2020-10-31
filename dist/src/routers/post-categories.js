@@ -49,7 +49,7 @@ exports.PostCategoriesRouter = (db) => {
         if (!r) {
             respond_1.default(res, 200, `This post category already exists.`);
         }
-        respond_1.default(res, 201, `Comment created.`);
+        respond_1.default(res, 201, `Post linked with category.`);
     });
     comments.delete("/:postId/:categoryId", (req, res) => {
         if (req.auth.id !== req.user.userId) {

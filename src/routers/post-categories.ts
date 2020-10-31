@@ -66,7 +66,7 @@ export const PostCategoriesRouter = (db: DbContext) => {
         if (!r) {
             respond(res, 200, `This post category already exists.`);
         }
-        respond(res, 201, `Comment created.`);
+        respond(res, 201, `Post linked with category.`);
     });
 
     comments.delete("/:postId/:categoryId", (req: PostCategoryAssignableRequest & AuthAssignableRequest, res) => {
