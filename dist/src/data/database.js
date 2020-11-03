@@ -11,6 +11,7 @@ const argon2_1 = __importDefault(require("argon2"));
 const comment_1 = require("./comment");
 const crypto_1 = __importDefault(require("crypto"));
 const date_1 = require("./date");
+const errorResult_1 = __importDefault(require("../api/errorResult"));
 const SUPER_SECRET_STRING = "hunter2";
 ;
 const isAuthPayload = (a) => {
@@ -69,82 +70,114 @@ class DbContext {
         stmts.forEach(stmt => this.db.prepare(stmt).run());
     }
     users() {
-        return this.db.prepare("SELECT * FROM USERS;")
-            .all()
-            .map(user_1.dbUserToUser);
+        var _a;
+        try {
+            return this.db.prepare("SELECT * FROM USERS;")
+                .all()
+                .map(user_1.dbUserToUser);
+        }
+        catch (e) {
+            return new errorResult_1.default((_a = e.message) !== null && _a !== void 0 ? _a : e);
+        }
     }
     user(userId) {
-        const x = this.db.prepare("SELECT * FROM USERS WHERE userId = ?;")
-            .all(userId)
-            .map(user_1.dbUserToUser);
-        return x.length > 0 ? x[0] : null;
+        var _a;
+        try {
+            const x = this.db.prepare("SELECT * FROM USERS WHERE userId = ?;")
+                .all(userId)
+                .map(user_1.dbUserToUser);
+            return x.length > 0 ? x[0] : new errorResult_1.default(`No users with id '${userId}'.`);
+        }
+        catch (e) {
+            return new errorResult_1.default((_a = e.message) !== null && _a !== void 0 ? _a : e);
+        }
     }
     async addUser(u) {
+        var _a;
         const hash = await argon2_1.default.hash(u.password);
         const dbu = { ...u, passwordHash: hash };
         try {
             const res = this.db.prepare("INSERT INTO Users VALUES(@userId, @firstName, @lastName, @emailAddress, @passwordHash)")
                 .run(dbu);
-            return res.changes > 0;
+            return res.changes > 0 ? true : new errorResult_1.default(`A user with id '${u.userId}' already exists.`);
         }
         catch (e) {
-            return false;
+            return new errorResult_1.default((_a = e.message) !== null && _a !== void 0 ? _a : e);
         }
     }
     async updateUser(u) {
+        var _a;
         const id = u.userId;
-        if (this.user(id) == null) {
-            return false;
+        const q = this.user(id);
+        if (q instanceof errorResult_1.default) {
+            return q;
         }
-        if (typeof u.firstName === "string") {
-            this.db.prepare("UPDATE Users SET firstName = ? WHERE userId = ?").run(u.firstName, id);
+        try {
+            if (typeof u.firstName === "string") {
+                this.db.prepare("UPDATE Users SET firstName = ? WHERE userId = ?").run(u.firstName, id);
+            }
+            if (typeof u.lastName === "string") {
+                this.db.prepare("UPDATE Users SET lastName = ? WHERE userId = ?").run(u.lastName, id);
+            }
+            if (typeof u.emailAddress === "string") {
+                this.db.prepare("UPDATE Users SET emailAddress = ? WHERE userId = ?").run(u.emailAddress, id);
+            }
+            if (typeof u.password === "string") {
+                const hash = await argon2_1.default.hash(u.password);
+                this.db.prepare("UPDATE Users SET passwordHash = ? WHERE userId = ?").run(hash, id);
+            }
+            return true;
         }
-        if (typeof u.lastName === "string") {
-            this.db.prepare("UPDATE Users SET lastName = ? WHERE userId = ?").run(u.lastName, id);
+        catch (e) {
+            return new errorResult_1.default((_a = e.message) !== null && _a !== void 0 ? _a : e);
         }
-        if (typeof u.emailAddress === "string") {
-            this.db.prepare("UPDATE Users SET emailAddress = ? WHERE userId = ?").run(u.emailAddress, id);
-        }
-        if (typeof u.password === "string") {
-            const hash = await argon2_1.default.hash(u.password);
-            this.db.prepare("UPDATE Users SET passwordHash = ? WHERE userId = ?").run(hash, id);
-        }
-        return true;
     }
     deleteUser(userId) {
-        const res = this.db.prepare("DELETE FROM Users WHERE userId = ?").run(userId);
-        return res.changes > 0;
+        var _a;
+        try {
+            const res = this.db.prepare("DELETE FROM Users WHERE userId = ?").run(userId);
+            return res.changes > 0 ? true : new errorResult_1.default(`No user with id '${userId}'.`);
+        }
+        catch (e) {
+            return new errorResult_1.default((_a = e.message) !== null && _a !== void 0 ? _a : e);
+        }
     }
     userPosts(userId) {
         return this.db.prepare("SELECT * FROM Posts WHERE userId = ?").all(userId).map(post_1.dbPostToPost);
     }
     async authenticateUser(id, password) {
+        var _a;
         const res = this.db.prepare("SELECT * FROM Users WHERE userId = ?")
             .all(id);
         if (res.length === 0) {
-            return null;
+            return new errorResult_1.default(`No user named '${id}'.`);
         }
         try {
             if (!(await argon2_1.default.verify(res[0].passwordHash, password))) {
+                return new errorResult_1.default(`Invalid password given for user '${id}'.`);
+            }
+        }
+        catch (e) {
+            return new errorResult_1.default((_a = e.message) !== null && _a !== void 0 ? _a : e);
+        }
+        const payload = { id, seed: crypto_1.default.randomInt(281474976710655) };
+        const token = jsonwebtoken_1.default.sign(payload, SUPER_SECRET_STRING, { expiresIn: "24h" });
+        return token;
+    }
+    decodeToken(token) {
+        try {
+            if (!jsonwebtoken_1.default.verify(token, SUPER_SECRET_STRING)) {
                 return null;
             }
+            const res = jsonwebtoken_1.default.decode(token);
+            if (!isAuthPayload(res)) {
+                return null;
+            }
+            return res;
         }
         catch (e) {
             return null;
         }
-        const payload = { id, seed: crypto_1.default.randomInt(281474976710655) };
-        const token = jsonwebtoken_1.default.sign(payload, SUPER_SECRET_STRING);
-        return token;
-    }
-    decodeToken(token) {
-        if (!jsonwebtoken_1.default.verify(token, SUPER_SECRET_STRING)) {
-            return null;
-        }
-        const res = jsonwebtoken_1.default.decode(token);
-        if (!isAuthPayload(res)) {
-            return null;
-        }
-        return res;
     }
     posts(userId) {
         if (userId) {

@@ -7,67 +7,74 @@ exports.UsersRouter = void 0;
 const express_1 = __importDefault(require("express"));
 const respond_1 = __importDefault(require("../api/respond"));
 const authorize_1 = __importDefault(require("../api/authorize"));
+const bodyPrepare_1 = __importDefault(require("../api/bodyPrepare"));
+const errorResult_1 = __importDefault(require("../api/errorResult"));
 exports.UsersRouter = (db) => {
     const users = express_1.default.Router();
     users.param("userId", (req, res, next, id) => {
         const user = db.user(id);
-        if (user === null) {
-            respond_1.default(res, 404, `No user with userId '${id}'`);
+        if (user instanceof errorResult_1.default) {
+            respond_1.default(res, 404, user.error);
             return;
         }
         req.user = user;
         next();
     });
+    users.post("/", async (req, res) => {
+        const b = bodyPrepare_1.default(req.body, ["userId", "firstName", "lastName", "emailAddress", "password"]);
+        if (b instanceof errorResult_1.default) {
+            res.status(400);
+            res.json({ "status": 400, ...b.error });
+            return;
+        }
+        const r = await db.addUser(b);
+        if (r instanceof errorResult_1.default) {
+            res.status(409);
+            res.json({ "status": 409, "error": r.error });
+            return;
+        }
+        res.status(201);
+        res.json({ status: 201, userId: b.userId, firstName: b.firstName, lastName: b.lastName, emailAddress: b.emailAddress });
+    });
+    users.get("/:id/:password", async (req, res) => {
+        const t = await db.authenticateUser(req.params.id, req.params.password);
+        if (t instanceof errorResult_1.default) {
+            respond_1.default(res, 401, t.error);
+            return;
+        }
+        res.cookie("X-Auth-Token", t, { secure: true, httpOnly: true });
+        res.setHeader("Authorization", `Bearer ${t}`);
+        res.status(200);
+        res.json({ "status": 200, "token": t });
+    });
+    users.use(authorize_1.default(db));
     users.get("/", (req, res) => {
-        res.json(db.users());
+        const r = db.users();
+        if (r instanceof errorResult_1.default) {
+            respond_1.default(res, 500, r.error);
+        }
+        else {
+            res.json(r);
+        }
     });
     users.get("/:userId", (req, res) => {
         res.json(req.user);
     });
-    users.post("/", async (req, res) => {
-        const b = req.body;
-        if (typeof b.userId !== "string" ||
-            typeof b.firstName !== "string" ||
-            typeof b.lastName !== "string" ||
-            typeof b.emailAddress !== "string" ||
-            typeof b.password !== "string") {
-            respond_1.default(res, 400, "The request body needs 'userId', 'firstName', 'lastName', 'emailAddress', and 'password' keys.");
-            return;
-        }
-        const r = await db.addUser(b);
-        if (!r) {
-            respond_1.default(res, 409, `A user with id '${b.userId}' already exists.`);
-            return;
-        }
-        respond_1.default(res, 201, `User '${b.userId}' created.`);
-    });
     users.get("/Posts/:userId", async (req, res) => {
         res.json(db.userPosts(req.user.userId));
     });
-    users.get("/:id/:password", async (req, res) => {
-        const t = await db.authenticateUser(req.params.id, req.params.password);
-        if (t === null) {
-            respond_1.default(res, 401, "Invalid credentials");
-            return;
-        }
-        res.cookie("X-Auth-Token", t);
-        res.setHeader("Authorization", `Bearer ${t}`);
-        res.status(200);
-        res.json({ "status": 200, "access_token": t });
-    });
-    users.use(authorize_1.default(db));
     users.patch("/:userId", async (req, res) => {
         const r = await db.updateUser({ ...req.body, userId: req.user.userId });
-        if (!r) {
-            respond_1.default(res, 404, `User '${req.user.userId}' does not exist.`);
+        if (r instanceof errorResult_1.default) {
+            respond_1.default(res, 404, r.error);
             return;
         }
         respond_1.default(res, 200, `User '${req.user.userId}' updated`);
     });
     users.delete("/:userId", async (req, res) => {
         const r = await db.deleteUser(req.user.userId);
-        if (!r) {
-            respond_1.default(res, 404, `User '${req.user.userId}`);
+        if (r instanceof errorResult_1.default) {
+            respond_1.default(res, 404, r.error);
             return;
         }
         respond_1.default(res, 204, `User '${req.user.userId}' deleted`);

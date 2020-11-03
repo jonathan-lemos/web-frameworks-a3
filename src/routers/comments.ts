@@ -5,6 +5,7 @@ import authorize, { AuthAssignableRequest } from "../api/authorize";
 import Comment from "../data/comment";
 import Post from "../data/post";
 import User from "../data/user";
+import ErrorResult from "../api/errorResult";
 
 export const CommentsRouter = (db: DbContext) => {
     const comments = express.Router();
@@ -23,8 +24,8 @@ export const CommentsRouter = (db: DbContext) => {
 
         const user = db.user(post.userId);
 
-        if (user === null) {
-            respond(res, 500, `No user with userId '${id}'`);
+        if (user instanceof ErrorResult) {
+            respond(res, 500, `Could not find posting user: ${user.error}`);
             return;
         }
 

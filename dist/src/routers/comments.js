@@ -7,6 +7,7 @@ exports.CommentsRouter = void 0;
 const express_1 = __importDefault(require("express"));
 const respond_1 = __importDefault(require("../api/respond"));
 const authorize_1 = __importDefault(require("../api/authorize"));
+const errorResult_1 = __importDefault(require("../api/errorResult"));
 exports.CommentsRouter = (db) => {
     const comments = express_1.default.Router();
     comments.param("postId", (req, res, next, id) => {
@@ -17,8 +18,8 @@ exports.CommentsRouter = (db) => {
         }
         req.post = post;
         const user = db.user(post.userId);
-        if (user === null) {
-            respond_1.default(res, 500, `No user with userId '${id}'`);
+        if (user instanceof errorResult_1.default) {
+            respond_1.default(res, 500, `Could not find posting user: ${user.error}`);
             return;
         }
         req.user = user;

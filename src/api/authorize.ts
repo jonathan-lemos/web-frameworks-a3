@@ -15,7 +15,8 @@ export const authorize = (db: DbContext) => (req: AuthAssignableRequest, res: ex
     const r = db.decodeToken(token);
 
     if (r == null) {
-        return r;
+        respond(res, 401);
+        return;
     }
 
     req.auth = r;

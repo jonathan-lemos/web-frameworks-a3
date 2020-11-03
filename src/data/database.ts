@@ -1,4 +1,4 @@
-import sqlite, { Database } from "better-sqlite3";
+import sqlite, { Database, SqliteError } from "better-sqlite3";
 import User, { AddUser, DbUser, dbUserToUser } from "./user";
 import jwt from "jsonwebtoken";
 import Post, { dbPostToPost, postToDbPost } from "./post";
@@ -8,6 +8,7 @@ import PostCategory from "./post-category";
 import Comment, { commentToDbComment, dbCommentToComment } from "./comment";
 import crypto from "crypto";
 import { dateToNumber } from "./date";
+import ErrorResult from "../api/errorResult";
 
 const SUPER_SECRET_STRING = "hunter2";
 
@@ -77,106 +78,132 @@ export default class DbContext {
         stmts.forEach(stmt => this.db.prepare(stmt).run());
     }
 
-    public users(): User[] {
-        return this.db.prepare("SELECT * FROM USERS;")
-            .all()
-            .map(dbUserToUser);
+    public users(): User[] | ErrorResult<string> {
+        try {
+            return this.db.prepare("SELECT * FROM USERS;")
+                .all()
+                .map(dbUserToUser);
+        }
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
+        }
     }
 
-    public user(userId: string): User | null {
-        const x = this.db.prepare("SELECT * FROM USERS WHERE userId = ?;")
-            .all(userId)
-            .map(dbUserToUser);
+    public user(userId: string): User | ErrorResult<string> {
+        try {
+            const x = this.db.prepare("SELECT * FROM USERS WHERE userId = ?;")
+                .all(userId)
+                .map(dbUserToUser);
 
-        return x.length > 0 ? x[0] : null;
+            return x.length > 0 ? x[0] : new ErrorResult(`No users with id '${userId}'.`);
+        }
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
+        }
     }
 
-    public async addUser(u: AddUser): Promise<boolean> {
+    public async addUser(u: AddUser): Promise<true | ErrorResult<string>> {
         const hash = await argon2.hash(u.password);
-        const dbu: DbUser = {...u, passwordHash: hash};
+        const dbu: DbUser = { ...u, passwordHash: hash };
 
         try {
             const res = this.db.prepare("INSERT INTO Users VALUES(@userId, @firstName, @lastName, @emailAddress, @passwordHash)")
                 .run(dbu);
 
-            return res.changes > 0;
+            return res.changes > 0 ? true : new ErrorResult(`A user with id '${u.userId}' already exists.`);
         }
         catch (e) {
-            return false;
+            return new ErrorResult(e.message ?? e);
         }
     }
 
-    public async updateUser(u: Partial<AddUser> & { userId: string }): Promise<boolean> {
+    public async updateUser(u: Partial<AddUser> & { userId: string }): Promise<true | ErrorResult<string>> {
         const id = u.userId;
+        const q = this.user(id);
 
-        if (this.user(id) == null) {
-            return false;
+        if (q instanceof ErrorResult) {
+            return q;
         }
 
-        if (typeof u.firstName === "string") {
-            this.db.prepare("UPDATE Users SET firstName = ? WHERE userId = ?").run(u.firstName, id);
-        }
+        try {
+            if (typeof u.firstName === "string") {
+                this.db.prepare("UPDATE Users SET firstName = ? WHERE userId = ?").run(u.firstName, id);
+            }
 
-        if (typeof u.lastName === "string") {
-            this.db.prepare("UPDATE Users SET lastName = ? WHERE userId = ?").run(u.lastName, id);
-        }
+            if (typeof u.lastName === "string") {
+                this.db.prepare("UPDATE Users SET lastName = ? WHERE userId = ?").run(u.lastName, id);
+            }
 
-        if (typeof u.emailAddress === "string") {
-            this.db.prepare("UPDATE Users SET emailAddress = ? WHERE userId = ?").run(u.emailAddress, id);
-        }
+            if (typeof u.emailAddress === "string") {
+                this.db.prepare("UPDATE Users SET emailAddress = ? WHERE userId = ?").run(u.emailAddress, id);
+            }
 
-        if (typeof u.password === "string") {
-            const hash = await argon2.hash(u.password);
-            this.db.prepare("UPDATE Users SET passwordHash = ? WHERE userId = ?").run(hash, id);
-        }
+            if (typeof u.password === "string") {
+                const hash = await argon2.hash(u.password);
+                this.db.prepare("UPDATE Users SET passwordHash = ? WHERE userId = ?").run(hash, id);
+            }
 
-        return true;
+            return true;
+        }
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
+        }
     }
 
-    public deleteUser(userId: string): boolean {
-        const res = this.db.prepare("DELETE FROM Users WHERE userId = ?").run(userId);
+    public deleteUser(userId: string): true | ErrorResult<string> {
+        try {
+            const res = this.db.prepare("DELETE FROM Users WHERE userId = ?").run(userId);
 
-        return res.changes > 0;
+            return res.changes > 0 ? true : new ErrorResult(`No user with id '${userId}'.`);
+        }
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
+        }
     }
 
     public userPosts(userId: string): Post[] {
         return this.db.prepare("SELECT * FROM Posts WHERE userId = ?").all(userId).map(dbPostToPost);
     }
 
-    public async authenticateUser(id: string, password: string): Promise<string | null> {
+    public async authenticateUser(id: string, password: string): Promise<string | ErrorResult<string>> {
         const res = this.db.prepare("SELECT * FROM Users WHERE userId = ?")
             .all(id);
 
         if (res.length === 0) {
-            return null;
+            return new ErrorResult(`No user named '${id}'.`);
         }
 
         try {
             if (!(await argon2.verify(res[0].passwordHash, password))) {
-                return null;
+                return new ErrorResult(`Invalid password given for user '${id}'.`);
             }
         }
         catch (e) {
-            return null;
+            return new ErrorResult(e.message ?? e);
         }
 
         const payload: AuthPayload = { id, seed: crypto.randomInt(281474976710655) };
 
-        const token = jwt.sign(payload, SUPER_SECRET_STRING);
+        const token = jwt.sign(payload, SUPER_SECRET_STRING, { expiresIn: "24h" });
         return token;
     }
 
     public decodeToken(token: string): AuthPayload | null {
-        if (!jwt.verify(token, SUPER_SECRET_STRING)) {
+        try {
+            if (!jwt.verify(token, SUPER_SECRET_STRING)) {
+                return null;
+            }
+
+            const res = jwt.decode(token);
+
+            if (!isAuthPayload(res)) {
+                return null;
+            }
+            return res;
+        }
+        catch (e) {
             return null;
         }
-
-        const res = jwt.decode(token);
-
-        if (!isAuthPayload(res)) {
-            return null;
-        }
-        return res;
     }
 
     public posts(userId?: string): Post[] | null {

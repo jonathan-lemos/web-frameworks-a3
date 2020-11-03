@@ -14,7 +14,8 @@ exports.authorize = (db) => (req, res, next) => {
     }
     const r = db.decodeToken(token);
     if (r == null) {
-        return r;
+        respond_1.default(res, 401);
+        return;
     }
     req.auth = r;
     next();
