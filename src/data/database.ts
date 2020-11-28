@@ -184,177 +184,268 @@ export default class DbContext {
 
         const payload: AuthPayload = { id, seed: crypto.randomInt(281474976710655) };
 
-        const token = jwt.sign(payload, SUPER_SECRET_STRING, { expiresIn: "24h" });
+        const token = jwt.sign(payload, SUPER_SECRET_STRING, { expiresIn: "24h", subject: id });
         return token;
     }
 
-    public decodeToken(token: string): AuthPayload | null {
+    public decodeToken(token: string): AuthPayload | ErrorResult<string> {
         try {
             if (!jwt.verify(token, SUPER_SECRET_STRING)) {
-                return null;
+                return new ErrorResult("The JWT could not be verified.");
             }
 
             const res = jwt.decode(token);
 
             if (!isAuthPayload(res)) {
-                return null;
+                return new ErrorResult("The JWT payload is of an invalid format.");
             }
             return res;
         }
         catch (e) {
-            return null;
+            return new ErrorResult(e.message ?? e);
         }
     }
 
-    public posts(userId?: string): Post[] | null {
-        if (userId) {
-            if (this.user(userId) === null) {
-                return null;
+    public posts(userId?: string): Post[] | ErrorResult<string> {
+        try {
+            if (userId) {
+                if (this.user(userId) === null) {
+                    return new ErrorResult("Invalid user ID");
+                }
+
+                return this.db.prepare("SELECT * FROM Posts WHERE userId = ?").all(userId).map(dbPostToPost);
             }
 
-            return this.db.prepare("SELECT * FROM Posts WHERE userId = ?").all(userId).map(dbPostToPost);
+            return this.db.prepare("SELECT * FROM Posts ORDER BY createdDate DESC").all().map(dbPostToPost);
         }
-
-        return this.db.prepare("SELECT * FROM Posts ORDER BY createdDate DESC").all().map(dbPostToPost);
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
+        }
     }
 
-    public post(postId: number): Post | null {
-        const res = this.db.prepare("SELECT * FROM Posts WHERE postId = ?").all(postId).map(dbPostToPost);
-        return res.length > 0 ? res[0] : null;
+    public post(postId: number): Post | ErrorResult<string> {
+        try {
+            const res = this.db.prepare("SELECT * FROM Posts WHERE postId = ?").all(postId).map(dbPostToPost);
+            return res.length > 0 ? res[0] : new ErrorResult(`No post with the given postId '${postId}'`);
+        }
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
+        }
     }
 
-    public addPost(post: Post): boolean {
+    public addPost(post: Post): true | ErrorResult<string> {
         const p = postToDbPost(post);
 
         try {
             const res = this.db.prepare("INSERT INTO Posts(userId, createdDate, title, content, headerImage, lastUpdated) VALUES (@userId, @createdDate, @title, @content, @headerImage, @lastUpdated)")
                 .run(p);
-            return res.changes > 0;
+            return res.changes > 0 ? true : new ErrorResult("Duplicate post");
         }
         catch (e) {
-            return false;
+            return new ErrorResult(e.message ?? e);
         }
     }
 
-    public updatePost(p: Partial<{ content: string, headerImage: string }> & { postId: number }): boolean {
-        if (this.post(p.postId) == null) {
-            return false;
+    public updatePost(p: Partial<{ content: string, headerImage: string }> & { postId: number }): true | ErrorResult<string> {
+        try {
+            if (this.post(p.postId) == null) {
+                return new ErrorResult(`No such post with postId '${p.postId}'`);
+            }
+    
+            if (typeof p.content === "string") {
+                this.db.prepare("UPDATE Posts SET content = ? WHERE postId = ?").run(p.content, p.postId);
+                this.db.prepare("UPDATE Posts SET lastUpdated = ? WHERE postId = ?").run(dateToNumber(new Date()), p.postId);
+            }
+    
+            if (typeof p.headerImage === "string") {
+                this.db.prepare("UPDATE Posts SET headerImage = ? WHERE postId = ?").run(p.headerImage, p.postId);
+                this.db.prepare("UPDATE Posts SET lastUpdated = ? WHERE postId = ?").run(dateToNumber(new Date()), p.postId);
+            }
+    
+            return true;
         }
-
-        if (typeof p.content === "string") {
-            this.db.prepare("UPDATE Posts SET content = ? WHERE postId = ?").run(p.content, p.postId);
-            this.db.prepare("UPDATE Posts SET lastUpdated = ? WHERE postId = ?").run(dateToNumber(new Date()), p.postId);
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
         }
+    }
 
-        if (typeof p.headerImage === "string") {
-            this.db.prepare("UPDATE Posts SET headerImage = ? WHERE postId = ?").run(p.headerImage, p.postId);
-            this.db.prepare("UPDATE Posts SET lastUpdated = ? WHERE postId = ?").run(dateToNumber(new Date()), p.postId);
+    public deletePost(postId: number): true | ErrorResult<string> {
+        try {
+            const res = this.db.prepare("DELETE FROM Posts WHERE postId = ?").run(postId);
+
+            return res.changes > 0 ? true : new ErrorResult<string>(`No such postId '${postId}'`);
         }
-
-        return true;
-    }
-
-    public deletePost(postId: number): boolean {
-        const res = this.db.prepare("DELETE FROM Posts WHERE postId = ?").run(postId);
-
-        return res.changes > 0;
-    }
-
-    public categories(): Category[] {
-        return this.db.prepare("SELECT * FROM Categories").all();
-    }
-
-    public category(categoryId: number): Category | null {
-        const res = this.db.prepare("SELECT * FROM Categories WHERE categoryId = ?").all(categoryId);
-        return res.length > 0 ? res[0] : null;
-    }
-
-    public addCategory(category: Category): void {
-        this.db.prepare("INSERT INTO Categories(name, description) VALUES (@name, @description)")
-            .run(category);
-    }
-
-    public updateCategory(c: Partial<Category> & { categoryId: number }): boolean {
-        if (this.category(c.categoryId) == null) {
-            return false;
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
         }
+    }
 
-        if (typeof c.name === "string") {
-            this.db.prepare("UPDATE Categories SET name = ? WHERE categoryId = ?").run(c.name, c.categoryId);
+    public categories(): Category[] | ErrorResult<string> {
+        try {
+            return this.db.prepare("SELECT * FROM Categories").all();
         }
-
-        if (typeof c.description === "string") {
-            this.db.prepare("UPDATE Categories SET description = ? WHERE categoryId = ?").run(c.description, c.categoryId);
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
         }
-
-        return true;
     }
 
-    public deleteCategory(categoryId: number): boolean {
-        const res = this.db.prepare("DELETE FROM Categories WHERE categoryId = ?").run(categoryId);
-
-        return res.changes > 0;
-    }
-
-    public postCategories(postId: number): Category[] {
-        return this.db.prepare(`
-        SELECT c.* from Posts p 
-        INNER JOIN PostCategories pc on p.postId = pc.postId
-        INNER JOIN Categories c on pc.categoryId = c.categoryId
-        WHERE p.postId = ?`).all(postId);
-    }
-
-    public categoryPosts(categoryId: number): Post[] {
-        return this.db.prepare(`
-        SELECT p.* from Categories c 
-        INNER JOIN PostCategories pc on c.categoryId = pc.categoryId
-        INNER JOIN Posts p on pc.postId = p.postId
-        WHERE c.categoryId = ?`).all(categoryId);
-    }
-
-    public addPostCategory(pc: PostCategory): boolean {
-        const res = this.db.prepare("INSERT INTO PostCategories VALUES(@categoryId, @postId)").run(pc);
-
-        return res.changes > 0;
-    }
-
-    public deletePostCategory(categoryId: number, postId: number): boolean {
-        const res = this.db.prepare("DELETE FROM PostCategories WHERE categoryId = ? AND postId = ?").run(categoryId, postId);
-
-        return res.changes > 0;
-    }
-
-    public comments(postId: number): Comment[] {
-        return this.db.prepare("SELECT * FROM Comments WHERE postId = ?").all(postId).map(dbCommentToComment);
-    }
-
-    public comment(postId: number, commentId: number): Comment | null {
-        const res = this.db.prepare("SELECT * FROM Comments WHERE commentId = ? AND postId = ?").all(commentId, postId);
-        return res.length > 0 ? res[0] : null;
-    }
-
-    public addComment(c: Comment): boolean {
-        const comments = this.db.prepare("SELECT * FROM Comments WHERE userId = ? ORDER BY commentId DESC").all(c.userId);
-        let id = 1;
-        if (comments.length > 0) {
-            id = comments[0].commentId + 1;
+    public category(categoryId: number): Category | ErrorResult<string> {
+        try {
+            const res = this.db.prepare("SELECT * FROM Categories WHERE categoryId = ?").all(categoryId);
+            return res.length > 0 ? res[0] : new ErrorResult(`No such category with id '${categoryId}'`);
         }
-
-        const dc = { ...commentToDbComment(c), commentId: id };
-
-        const res = this.db.prepare("INSERT INTO Comments VALUES (@commentId, @userId, @postId, @comment, @commentDate)").run(dc);
-        return res.changes > 0;
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
+        }
     }
 
-    public updateComment(userId: string, postId: number, commentId: number, content: string): boolean {
-        const res = this.db.prepare("UPDATE Comments SET comment = ? WHERE userId = ? AND commentId = ? AND postId = ?").run(content, userId, commentId, postId);
-
-        return res.changes > 0;
+    public addCategory(category: Category): true | ErrorResult<string> {
+        try {
+            const res = this.db.prepare("INSERT INTO Categories(name, description) VALUES (@name, @description)")
+                .run(category);
+            return res.changes > 0 ? true : new ErrorResult("Duplicate category");
+        }
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
+        }
     }
 
-    public deleteComment(postId: number, commentId: number): boolean {
-        const res = this.db.prepare("DELETE FROM Comments WHERE commentId = ? AND postId = ?").run(commentId, postId);
+    public updateCategory(c: Partial<Category> & { categoryId: number }): true | ErrorResult<string> {
+        try {
+            if (this.category(c.categoryId) == null) {
+                return new ErrorResult(`No such category with id '${c.categoryId}'`);
+            }
+    
+            if (typeof c.name === "string") {
+                this.db.prepare("UPDATE Categories SET name = ? WHERE categoryId = ?").run(c.name, c.categoryId);
+            }
+    
+            if (typeof c.description === "string") {
+                this.db.prepare("UPDATE Categories SET description = ? WHERE categoryId = ?").run(c.description, c.categoryId);
+            }
+    
+            return true;
+        }
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
+        }
+    }
 
-        return res.changes > 0;
+    public deleteCategory(categoryId: number): true | ErrorResult<string> {
+        try {
+            const res = this.db.prepare("DELETE FROM Categories WHERE categoryId = ?").run(categoryId);
+
+            return res.changes > 0 ? true : new ErrorResult(`No category with id '${categoryId}'`);
+        }
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
+        }
+    }
+
+    public postCategories(postId: number): Category[] | ErrorResult<string> {
+        try {
+            return this.db.prepare(`
+            SELECT c.* from Posts p 
+            INNER JOIN PostCategories pc on p.postId = pc.postId
+            INNER JOIN Categories c on pc.categoryId = c.categoryId
+            WHERE p.postId = ?`).all(postId);
+        }
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
+        }
+    }
+
+    public categoryPosts(categoryId: number): Post[] | ErrorResult<string> {
+        try {
+            return this.db.prepare(`
+            SELECT p.* from Categories c 
+            INNER JOIN PostCategories pc on c.categoryId = pc.categoryId
+            INNER JOIN Posts p on pc.postId = p.postId
+            WHERE c.categoryId = ?`).all(categoryId);
+        }
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
+        }
+    }
+
+    public addPostCategory(pc: PostCategory): true | ErrorResult<string> {
+        try {
+            const res = this.db.prepare("INSERT INTO PostCategories VALUES(@categoryId, @postId)").run(pc);
+
+            return res.changes > 0 ? true : new ErrorResult("Duplicate PostCategory");
+        }
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
+        }
+    }
+
+    public deletePostCategory(categoryId: number, postId: number): true | ErrorResult<string> {
+        try {
+            const res = this.db.prepare("DELETE FROM PostCategories WHERE categoryId = ? AND postId = ?").run(categoryId, postId);
+
+            return res.changes > 0 ? true : new ErrorResult("A PostCategory with the given parameters was not found.");
+        }
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
+        }
+    }
+
+    public comments(postId: number): Comment[] | ErrorResult<string> {
+        try {
+            return this.db.prepare("SELECT * FROM Comments WHERE postId = ?").all(postId).map(dbCommentToComment);
+        }
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
+        }
+    }
+
+    public comment(postId: number, commentId: number): Comment | ErrorResult<string> {
+        try {
+            const res = this.db.prepare("SELECT * FROM Comments WHERE commentId = ? AND postId = ?").all(commentId, postId);
+            return res.length > 0 ? res[0] : new ErrorResult(`No comments with the given postId and commentId`);
+        }
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
+        }
+    }
+
+    public addComment(c: Comment): true | ErrorResult<string> {
+        try {
+            const comments = this.db.prepare("SELECT * FROM Comments WHERE userId = ? ORDER BY commentId DESC").all(c.userId);
+            let id = 1;
+            if (comments.length > 0) {
+                id = comments[0].commentId + 1;
+            }
+    
+            const dc = { ...commentToDbComment(c), commentId: id };
+    
+            const res = this.db.prepare("INSERT INTO Comments VALUES (@commentId, @userId, @postId, @comment, @commentDate)").run(dc);
+            return res.changes > 0 ? true : new ErrorResult("Duplicate comment");
+        }
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
+        }
+    }
+
+    public updateComment(userId: string, postId: number, commentId: number, content: string): true | ErrorResult<string> {
+        try {
+            const res = this.db.prepare("UPDATE Comments SET comment = ? WHERE userId = ? AND commentId = ? AND postId = ?").run(content, userId, commentId, postId);
+
+            return res.changes > 0 ? true : new ErrorResult("Could not find a comment with the given input parameters");
+        }
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
+        }
+    }
+
+    public deleteComment(postId: number, commentId: number): true | ErrorResult<string> {
+        try {
+            const res = this.db.prepare("DELETE FROM Comments WHERE commentId = ? AND postId = ?").run(commentId, postId);
+
+            return res.changes > 0 ? true : new ErrorResult("Could not find a comment with the given input parameters");
+        }
+        catch (e) {
+            return new ErrorResult(e.message ?? e);
+        }
     }
 }

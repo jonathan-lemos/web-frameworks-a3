@@ -15,8 +15,8 @@ export const PostCategoriesRouter = (db: DbContext) => {
     comments.param("postId", (req: PostCategoryAssignableRequest, res, next, id) => {
         const post = db.post(id);
 
-        if (post === null) {
-            respond(res, 404, `No post with postId '${id}'`);
+        if (post instanceof ErrorResult) {
+            respond(res, 404, post.error);
             return;
         }
 
@@ -37,8 +37,8 @@ export const PostCategoriesRouter = (db: DbContext) => {
     comments.param("categoryId", (req: PostCategoryAssignableRequest, res, next, id) => {
         const category = db.category(id);
 
-        if (category === null) {
-            respond(res, 404, `No category with categoryId '${id}'`);
+        if (category instanceof ErrorResult) {
+            respond(res, 404, category.error);
             return;
         }
 
@@ -48,11 +48,25 @@ export const PostCategoriesRouter = (db: DbContext) => {
     });
 
     comments.get("/:postId", (req: PostCategoryAssignableRequest, res) => {
-        res.json(db.postCategories(req.post!.postId));
+        const r = db.postCategories(req.post!.postId);
+        if (r instanceof ErrorResult) {
+            res.status(500);
+            res.json(r.error);
+        }
+        else {
+            res.json(r);
+        }
     });
 
     comments.get("/Posts/:categoryId", (req: PostCategoryAssignableRequest, res) => {
-        res.json(db.categoryPosts(req.category!.categoryId));
+        const r = db.categoryPosts(req.category!.categoryId);
+        if (r instanceof ErrorResult) {
+            res.status(500);
+            res.json(r.error);
+        }
+        else {
+            res.json(r);
+        }
     });
 
     comments.use(authorize(db));
@@ -64,10 +78,12 @@ export const PostCategoriesRouter = (db: DbContext) => {
         }
 
         const r = db.addPostCategory({postId: req.post!.postId, categoryId: req.category!.categoryId});
-        if (!r) {
-            respond(res, 200, `This post category already exists.`);
+        if (r instanceof ErrorResult) {
+            respond(res, 200, r.error);
         }
-        respond(res, 201, `Post linked with category.`);
+        else {
+            respond(res, 201, `Post linked with category.`);
+        }
     });
 
     comments.delete("/:postId/:categoryId", (req: PostCategoryAssignableRequest & AuthAssignableRequest, res) => {
@@ -78,8 +94,8 @@ export const PostCategoriesRouter = (db: DbContext) => {
 
         const r = db.deletePostCategory(req.post!.postId, req.category!.categoryId);
 
-        if (!r) {
-            respond(res, 404, `Comment '${req.category!.categoryId}' does not exist.`);
+        if (r instanceof ErrorResult) {
+            respond(res, 404, r.error);
             return;
         }
         respond(res, 204, `Comment '${req.category!.categoryId}' deleted`);

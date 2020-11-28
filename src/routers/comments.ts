@@ -15,8 +15,8 @@ export const CommentsRouter = (db: DbContext) => {
     comments.param("postId", (req: CommentAssignableRequest, res, next, id) => {
         const post = db.post(id);
 
-        if (post === null) {
-            respond(res, 404, `No post with postId '${id}'`);
+        if (post instanceof ErrorResult) {
+            respond(res, 404, post.error);
             return;
         }
 
@@ -37,8 +37,8 @@ export const CommentsRouter = (db: DbContext) => {
     comments.param("commentId", (req: CommentAssignableRequest, res, next, id) => {
         const comment = db.comment(req.post!.postId, id);
 
-        if (comment === null) {
-            respond(res, 404, `No comment with commentId '${id}'`);
+        if (comment instanceof ErrorResult) {
+            respond(res, 404, comment.error);
             return;
         }
 
@@ -48,8 +48,9 @@ export const CommentsRouter = (db: DbContext) => {
     });
 
     comments.get("/:postId", (req: CommentAssignableRequest, res) => {
-        console.log("got here");
-        res.json(db.comments(req.post!.postId));
+        const r = db.comments(req.post!.postId);
+        res.status(r instanceof ErrorResult ? 500 : 200);
+        res.json(r instanceof ErrorResult ? r.error : r);
     });
 
     comments.get("/:postId/:commentId", (req: CommentAssignableRequest, res) => {
@@ -68,7 +69,12 @@ export const CommentsRouter = (db: DbContext) => {
         }
 
         const r = db.addComment({...b, postId: req.post!.postId, commentDate: new Date()});
-        respond(res, 201, `Comment created.`);
+        if (r instanceof ErrorResult) {
+            respond(res, 500, r.error);
+        }
+        else {
+            respond(res, 201, `Comment created.`);
+        }
     });
 
     comments.patch("/:postId/:commentId", (req: CommentAssignableRequest & AuthAssignableRequest, res) => {
@@ -78,8 +84,8 @@ export const CommentsRouter = (db: DbContext) => {
         }
 
         const r = db.updateComment(req.user!.userId, req.post!.postId, req.comment!.commentId, req.body.content);
-        if (!r) {
-            respond(res, 404, `Comment '${req.comment!.commentId}' not updated.`);
+        if (r instanceof ErrorResult) {
+            respond(res, 404, r.error);
             return;
         }
 
@@ -94,8 +100,8 @@ export const CommentsRouter = (db: DbContext) => {
 
         const r = db.deleteComment(req.post!.postId, req.comment!.commentId);
 
-        if (!r) {
-            respond(res, 404, `Comment '${req.comment!.commentId}' does not exist.`);
+        if (r instanceof ErrorResult) {
+            respond(res, 404, r.error);
             return;
         }
         respond(res, 204, `Comment '${req.comment!.commentId}' deleted`);

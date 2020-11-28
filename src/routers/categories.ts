@@ -3,6 +3,7 @@ import DbContext from "../data/database";
 import respond from "../api/respond";
 import authorize from "../api/authorize";
 import Category from "../data/category";
+import ErrorResult from "../api/errorResult";
 
 export const CategoriesRouter = (db: DbContext) => {
     const categories = express.Router();
@@ -12,8 +13,8 @@ export const CategoriesRouter = (db: DbContext) => {
     categories.param("categoryId", (req: CategoryAssignableRequest, res, next, id) => {
         const category = db.category(id);
 
-        if (category === null) {
-            respond(res, 404, `No category with categoryId '${id}'`);
+        if (category instanceof ErrorResult) {
+            respond(res, 404, category.error);
             return;
         }
 
@@ -23,7 +24,9 @@ export const CategoriesRouter = (db: DbContext) => {
     });
 
     categories.get("/", (req, res) => {
-        res.json(db.categories());
+        const r = db.categories();
+        res.status(r instanceof ErrorResult ? 500 : 200);
+        res.json(r instanceof ErrorResult ? r.error : r);
     });
 
     categories.get("/:categoryId", (req: CategoryAssignableRequest, res) => {
@@ -44,7 +47,7 @@ export const CategoriesRouter = (db: DbContext) => {
 
         try {
             const r = db.addCategory(b);
-            respond(res, 201, `Category created.`);
+            r instanceof ErrorResult ? respond(res, 409, r.error) : respond(res, 201, `Category created.`);
         }
         catch (e) {
             respond(res, 409, `A category called ${b.name} already exists.`);
@@ -53,8 +56,8 @@ export const CategoriesRouter = (db: DbContext) => {
 
     categories.patch("/:categoryId", (req: CategoryAssignableRequest, res) => {
         const r = db.updateCategory({ ...req.body, categoryId: req.category!.categoryId });
-        if (!r) {
-            respond(res, 404, `Category '${req.category!.categoryId}' does not exist.`);
+        if (r instanceof ErrorResult) {
+            respond(res, 404, r.error);
             return;
         }
         respond(res, 200, `Category '${req.category!.categoryId}' updated`);
@@ -62,8 +65,8 @@ export const CategoriesRouter = (db: DbContext) => {
 
     categories.delete("/:categoryId", (req: CategoryAssignableRequest, res) => {
         const r = db.deleteCategory(req.category!.categoryId);
-        if (!r) {
-            respond(res, 404, `Category '${req.category!.categoryId}' does not exist.`);
+        if (r instanceof ErrorResult) {
+            respond(res, 404, r.error);
             return;
         }
         respond(res, 204, `Category '${req.category!.categoryId}' deleted`);
