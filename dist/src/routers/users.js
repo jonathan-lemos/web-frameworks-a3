@@ -37,6 +37,10 @@ exports.UsersRouter = (db) => {
         res.json({ status: 201, userId: b.userId, firstName: b.firstName, lastName: b.lastName, emailAddress: b.emailAddress });
     });
     users.get("/:id/:password", async (req, res) => {
+        if (req.params.id.toLowerCase() === "posts") {
+            res.json(db.userPosts(req.params.password));
+            return;
+        }
         const t = await db.authenticateUser(req.params.id, req.params.password);
         if (t instanceof errorResult_1.default) {
             respond_1.default(res, 401, t.error);

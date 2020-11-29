@@ -1,5 +1,6 @@
 import express from "express";
 import DbContext, { AuthPayload } from "../data/database";
+import ErrorResult from "./errorResult";
 import respond from "./respond";
 
 export type AuthAssignableRequest = express.Request & Partial<{auth: AuthPayload}> & Partial<{cookies: any}>;
@@ -14,8 +15,8 @@ export const authorize = (db: DbContext) => (req: AuthAssignableRequest, res: ex
 
     const r = db.decodeToken(token);
 
-    if (r == null) {
-        respond(res, 401);
+    if (r instanceof ErrorResult) {
+        respond(res, 401, r.error);
         return;
     }
 

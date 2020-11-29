@@ -199,6 +199,12 @@ export default class DbContext {
             if (!isAuthPayload(res)) {
                 return new ErrorResult("The JWT payload is of an invalid format.");
             }
+
+            let u = this.user(res.id);
+            if (u instanceof ErrorResult) {
+                return u;
+            }
+
             return res;
         }
         catch (e) {

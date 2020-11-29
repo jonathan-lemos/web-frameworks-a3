@@ -12,8 +12,8 @@ exports.PostCategoriesRouter = (db) => {
     const comments = express_1.default.Router();
     comments.param("postId", (req, res, next, id) => {
         const post = db.post(id);
-        if (post === null) {
-            respond_1.default(res, 404, `No post with postId '${id}'`);
+        if (post instanceof errorResult_1.default) {
+            respond_1.default(res, 404, post.error);
             return;
         }
         req.post = post;
@@ -27,18 +27,32 @@ exports.PostCategoriesRouter = (db) => {
     });
     comments.param("categoryId", (req, res, next, id) => {
         const category = db.category(id);
-        if (category === null) {
-            respond_1.default(res, 404, `No category with categoryId '${id}'`);
+        if (category instanceof errorResult_1.default) {
+            respond_1.default(res, 404, category.error);
             return;
         }
         req.category = category;
         next();
     });
     comments.get("/:postId", (req, res) => {
-        res.json(db.postCategories(req.post.postId));
+        const r = db.postCategories(req.post.postId);
+        if (r instanceof errorResult_1.default) {
+            res.status(500);
+            res.json(r.error);
+        }
+        else {
+            res.json(r);
+        }
     });
     comments.get("/Posts/:categoryId", (req, res) => {
-        res.json(db.categoryPosts(req.category.categoryId));
+        const r = db.categoryPosts(req.category.categoryId);
+        if (r instanceof errorResult_1.default) {
+            res.status(500);
+            res.json(r.error);
+        }
+        else {
+            res.json(r);
+        }
     });
     comments.use(authorize_1.default(db));
     comments.post("/:postId/:categoryId", (req, res) => {
@@ -47,10 +61,12 @@ exports.PostCategoriesRouter = (db) => {
             return;
         }
         const r = db.addPostCategory({ postId: req.post.postId, categoryId: req.category.categoryId });
-        if (!r) {
-            respond_1.default(res, 200, `This post category already exists.`);
+        if (r instanceof errorResult_1.default) {
+            respond_1.default(res, 200, r.error);
         }
-        respond_1.default(res, 201, `Post linked with category.`);
+        else {
+            respond_1.default(res, 201, `Post linked with category.`);
+        }
     });
     comments.delete("/:postId/:categoryId", (req, res) => {
         if (req.auth.id !== req.user.userId) {
@@ -58,8 +74,8 @@ exports.PostCategoriesRouter = (db) => {
             return;
         }
         const r = db.deletePostCategory(req.post.postId, req.category.categoryId);
-        if (!r) {
-            respond_1.default(res, 404, `Comment '${req.category.categoryId}' does not exist.`);
+        if (r instanceof errorResult_1.default) {
+            respond_1.default(res, 404, r.error);
             return;
         }
         respond_1.default(res, 204, `Comment '${req.category.categoryId}' deleted`);

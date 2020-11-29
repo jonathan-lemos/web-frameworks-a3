@@ -7,11 +7,12 @@ exports.PostsRouter = void 0;
 const express_1 = __importDefault(require("express"));
 const respond_1 = __importDefault(require("../api/respond"));
 const authorize_1 = __importDefault(require("../api/authorize"));
+const errorResult_1 = __importDefault(require("../api/errorResult"));
 exports.PostsRouter = (db) => {
     const posts = express_1.default.Router();
     posts.param("postId", (req, res, next, id) => {
         const post = db.post(id);
-        if (post === null) {
+        if (post instanceof errorResult_1.default) {
             respond_1.default(res, 404, `No post with postId '${id}'`);
             return;
         }
@@ -19,7 +20,14 @@ exports.PostsRouter = (db) => {
         next();
     });
     posts.get("/", (req, res) => {
-        res.json(db.posts());
+        const r = db.posts();
+        if (r instanceof errorResult_1.default) {
+            res.status(500);
+            res.json(r.error);
+        }
+        else {
+            res.json(r);
+        }
     });
     posts.get("/:postId", (req, res) => {
         res.json(req.post);
@@ -34,25 +42,26 @@ exports.PostsRouter = (db) => {
             return;
         }
         const d = new Date();
-        if (db.addPost({ ...b, userId: req.auth.id, lastUpdated: d, createdDate: d })) {
+        const r = db.addPost({ ...b, userId: req.auth.id, lastUpdated: d, createdDate: d });
+        if (!(r instanceof errorResult_1.default)) {
             respond_1.default(res, 201, `Post created.`);
         }
         else {
-            respond_1.default(res, 400, "Failed to add the post.");
+            respond_1.default(res, 400, r.error);
         }
     });
     posts.patch("/:postId", (req, res) => {
         const r = db.updatePost({ ...req.body, postId: req.post.postId });
-        if (!r) {
-            respond_1.default(res, 404, `Post '${req.post.postId}' does not exist.`);
+        if (r instanceof errorResult_1.default) {
+            respond_1.default(res, 404, r.error);
             return;
         }
         respond_1.default(res, 200, `Post '${req.post.postId}' updated`);
     });
     posts.delete("/:postId", (req, res) => {
         const r = db.deletePost(req.post.postId);
-        if (!r) {
-            respond_1.default(res, 404, `Post '${req.post.postId}' does not exist.`);
+        if (r instanceof errorResult_1.default) {
+            respond_1.default(res, 404, r.error);
             return;
         }
         respond_1.default(res, 204, `Post '${req.post.postId}' deleted`);

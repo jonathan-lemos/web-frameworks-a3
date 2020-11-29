@@ -12,8 +12,8 @@ exports.CommentsRouter = (db) => {
     const comments = express_1.default.Router();
     comments.param("postId", (req, res, next, id) => {
         const post = db.post(id);
-        if (post === null) {
-            respond_1.default(res, 404, `No post with postId '${id}'`);
+        if (post instanceof errorResult_1.default) {
+            respond_1.default(res, 404, post.error);
             return;
         }
         req.post = post;
@@ -27,16 +27,17 @@ exports.CommentsRouter = (db) => {
     });
     comments.param("commentId", (req, res, next, id) => {
         const comment = db.comment(req.post.postId, id);
-        if (comment === null) {
-            respond_1.default(res, 404, `No comment with commentId '${id}'`);
+        if (comment instanceof errorResult_1.default) {
+            respond_1.default(res, 404, comment.error);
             return;
         }
         req.comment = comment;
         next();
     });
     comments.get("/:postId", (req, res) => {
-        console.log("got here");
-        res.json(db.comments(req.post.postId));
+        const r = db.comments(req.post.postId);
+        res.status(r instanceof errorResult_1.default ? 500 : 200);
+        res.json(r instanceof errorResult_1.default ? r.error : r);
     });
     comments.get("/:postId/:commentId", (req, res) => {
         res.json(req.comment);
@@ -50,7 +51,12 @@ exports.CommentsRouter = (db) => {
             return;
         }
         const r = db.addComment({ ...b, postId: req.post.postId, commentDate: new Date() });
-        respond_1.default(res, 201, `Comment created.`);
+        if (r instanceof errorResult_1.default) {
+            respond_1.default(res, 500, r.error);
+        }
+        else {
+            respond_1.default(res, 201, `Comment created.`);
+        }
     });
     comments.patch("/:postId/:commentId", (req, res) => {
         if (typeof req.body.content !== "string") {
@@ -58,8 +64,8 @@ exports.CommentsRouter = (db) => {
             return;
         }
         const r = db.updateComment(req.user.userId, req.post.postId, req.comment.commentId, req.body.content);
-        if (!r) {
-            respond_1.default(res, 404, `Comment '${req.comment.commentId}' not updated.`);
+        if (r instanceof errorResult_1.default) {
+            respond_1.default(res, 404, r.error);
             return;
         }
         respond_1.default(res, 200, `Comment '${req.comment.commentId}' updated`);
@@ -70,8 +76,8 @@ exports.CommentsRouter = (db) => {
             return;
         }
         const r = db.deleteComment(req.post.postId, req.comment.commentId);
-        if (!r) {
-            respond_1.default(res, 404, `Comment '${req.comment.commentId}' does not exist.`);
+        if (r instanceof errorResult_1.default) {
+            respond_1.default(res, 404, r.error);
             return;
         }
         respond_1.default(res, 204, `Comment '${req.comment.commentId}' deleted`);

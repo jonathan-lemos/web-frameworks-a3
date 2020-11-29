@@ -48,6 +48,11 @@ export const UsersRouter = (db: DbContext) => {
     });
 
     users.get("/:id/:password", async (req, res) => {
+        if (req.params.id.toLowerCase() === "posts") {
+            res.json(db.userPosts(req.params.password));
+            return;
+        }
+
         const t = await db.authenticateUser(req.params.id, req.params.password);
         if (t instanceof ErrorResult) {
             respond(res, 401, t.error);
