@@ -321,6 +321,10 @@ export default class DbContext {
             if (this.category(c.categoryId) == null) {
                 return new ErrorResult(`No such category with id '${c.categoryId}'`);
             }
+
+            if (c.name == null && c.description == null) {
+                return new ErrorResult("The category update needs 'name' and/or 'description' keys.")
+            }
     
             if (typeof c.name === "string") {
                 this.db.prepare("UPDATE Categories SET name = ? WHERE categoryId = ?").run(c.name, c.categoryId);

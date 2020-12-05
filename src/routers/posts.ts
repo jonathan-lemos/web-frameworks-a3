@@ -51,6 +51,11 @@ export const PostsRouter = (db: DbContext) => {
             return;
         }
 
+        if (b.title === "" || b.content === "") {
+            respond(res, 400, "The title and content cannot be blank.");
+            return;
+        }
+
         const d = new Date();
 
         const r = db.addPost({...b, userId: req.auth!.id, lastUpdated: d, createdDate: d});

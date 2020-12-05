@@ -27,6 +27,11 @@ exports.UsersRouter = (db) => {
             res.json({ "status": 400, ...b.error });
             return;
         }
+        if (b.emailAddress == null || !(/.*@.*\..*/.test(b.emailAddress))) {
+            res.status(409);
+            res.json({ "status": 409, "error": `Invalid email ${b.emailAddress}` });
+            return;
+        }
         const r = await db.addUser(b);
         if (r instanceof errorResult_1.default) {
             res.status(409);
@@ -68,6 +73,11 @@ exports.UsersRouter = (db) => {
         res.json(db.userPosts(req.user.userId));
     });
     users.patch("/:userId", async (req, res) => {
+        if (req.body.emailAddress != null && !(/.*@.*\..*/.test(req.body.emailAddress))) {
+            res.status(409);
+            res.json({ "status": 409, "error": `Invalid email ${req.body.emailAddress}` });
+            return;
+        }
         const r = await db.updateUser({ ...req.body, userId: req.user.userId });
         if (r instanceof errorResult_1.default) {
             respond_1.default(res, 404, r.error);

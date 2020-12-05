@@ -25,7 +25,7 @@ app.use("/Users", UsersRouter(db));
 app.use("/Posts", PostsRouter(db));
 app.use("/Comments", CommentsRouter(db));
 app.use("/Categories", CategoriesRouter(db));
-app.use("/PostCategories", PostCategoriesRouter(db));
+app.use("/PostCategory", PostCategoriesRouter(db));
 
 app.use("*", (req, res) => respond(res, 404, `Invalid endpoint ${req.method} '${req.originalUrl}'`));
 

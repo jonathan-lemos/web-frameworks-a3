@@ -35,6 +35,12 @@ export const UsersRouter = (db: DbContext) => {
             return;
         }
 
+        if (b.emailAddress == null || !(/.*@.*\..*/.test(b.emailAddress))) {
+            res.status(409);
+            res.json({"status": 409, "error": `Invalid email ${b.emailAddress}`});
+            return;
+        }
+
         const r = await db.addUser(b as any);
 
         if (r instanceof ErrorResult) {
@@ -86,6 +92,12 @@ export const UsersRouter = (db: DbContext) => {
     });
 
     users.patch("/:userId", async (req: UserRequest, res) => {
+        if (req.body.emailAddress != null && !(/.*@.*\..*/.test(req.body.emailAddress))) {
+            res.status(409);
+            res.json({"status": 409, "error": `Invalid email ${req.body.emailAddress}`});
+            return;
+        }
+
         const r = await db.updateUser({ ...req.body, userId: req.user!.userId });
         if (r instanceof ErrorResult) {
             respond(res, 404, r.error);

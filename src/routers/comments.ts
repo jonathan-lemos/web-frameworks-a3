@@ -62,13 +62,13 @@ export const CommentsRouter = (db: DbContext) => {
     comments.post("/:postId", (req: CommentAssignableRequest & AuthAssignableRequest, res) => {
         const b = req.body;
 
-        if (typeof b.userId !== "string" ||
+        if (
         typeof b.comment !== "string") {
-            respond(res, 400, "The request body needs  'userId', 'postId', and 'comment' keys.");
+            respond(res, 400, "The request body needs a 'comment' key.");
             return;
         }
 
-        const r = db.addComment({...b, postId: req.post!.postId, commentDate: new Date()});
+        const r = db.addComment({...b, userId: req.user!.userId, postId: req.post!.postId, commentDate: new Date()});
         if (r instanceof ErrorResult) {
             respond(res, 500, r.error);
         }
@@ -78,12 +78,12 @@ export const CommentsRouter = (db: DbContext) => {
     });
 
     comments.patch("/:postId/:commentId", (req: CommentAssignableRequest & AuthAssignableRequest, res) => {
-        if (typeof req.body.content !== "string") {
-            respond(res, 400, `No 'content' given in post body.`);
+        if (typeof req.body.comment !== "string") {
+            respond(res, 400, `No 'comment' given in post body.`);
             return;
         }
 
-        const r = db.updateComment(req.user!.userId, req.post!.postId, req.comment!.commentId, req.body.content);
+        const r = db.updateComment(req.user!.userId, req.post!.postId, req.comment!.commentId, req.body.comment);
         if (r instanceof ErrorResult) {
             respond(res, 404, r.error);
             return;

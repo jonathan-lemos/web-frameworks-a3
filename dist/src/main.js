@@ -28,7 +28,7 @@ app.use("/Users", users_1.default(db));
 app.use("/Posts", posts_1.default(db));
 app.use("/Comments", comments_1.default(db));
 app.use("/Categories", categories_1.default(db));
-app.use("/PostCategories", post_categories_1.default(db));
+app.use("/PostCategory", post_categories_1.default(db));
 app.use("*", (req, res) => respond_1.default(res, 404, `Invalid endpoint ${req.method} '${req.originalUrl}'`));
 console.log("Express listening on port 3000");
 app.listen(3000);

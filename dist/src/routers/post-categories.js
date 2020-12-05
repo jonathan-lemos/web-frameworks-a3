@@ -73,7 +73,7 @@ exports.PostCategoriesRouter = (db) => {
             respond_1.default(res, 403, `User '${req.auth.id}' does not have permission to modify this post.`);
             return;
         }
-        const r = db.deletePostCategory(req.post.postId, req.category.categoryId);
+        const r = db.deletePostCategory(req.category.categoryId, req.post.postId);
         if (r instanceof errorResult_1.default) {
             respond_1.default(res, 404, r.error);
             return;

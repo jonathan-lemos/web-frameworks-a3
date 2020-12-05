@@ -92,7 +92,7 @@ export const PostCategoriesRouter = (db: DbContext) => {
             return;
         }
 
-        const r = db.deletePostCategory(req.post!.postId, req.category!.categoryId);
+        const r = db.deletePostCategory(req.category!.categoryId, req.post!.postId);
 
         if (r instanceof ErrorResult) {
             respond(res, 404, r.error);

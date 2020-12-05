@@ -41,6 +41,10 @@ exports.PostsRouter = (db) => {
             respond_1.default(res, 400, "The request body needs 'postId', 'title', 'content', and 'headerImage' keys.");
             return;
         }
+        if (b.title === "" || b.content === "") {
+            respond_1.default(res, 400, "The title and content cannot be blank.");
+            return;
+        }
         const d = new Date();
         const r = db.addPost({ ...b, userId: req.auth.id, lastUpdated: d, createdDate: d });
         if (!(r instanceof errorResult_1.default)) {
